@@ -223,7 +223,14 @@
             const pixelX = tlX * projector.tileSize + pxX;
             const pixelY = tlY * projector.tileSize + pxY;
 
-            if (isNaN(pixelX) || isNaN(pixelY)) {
+            if (
+                !Number.isInteger(tlX) || !Number.isInteger(tlY) ||
+                !Number.isInteger(pxX) || !Number.isInteger(pxY) ||
+                pxX < 0 || pxX >= projector.tileSize ||
+                pxY < 0 || pxY >= projector.tileSize ||
+                tlX < 0 || tlX > 2047 ||
+                tlY < 0 || tlY > 2047
+            ) {
                 document.getElementById('output-area').textContent = 'Ошибка: некорректные входные данные.';
                 return;
             }
