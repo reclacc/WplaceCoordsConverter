@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace.live Coordinate Converter
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.0.0
 // @description  Converts coordinates on wplace.live between Tile/Pixel and Lat/Lon
 // @author       reclacc
 // @match        *://*.wplace.live/*
