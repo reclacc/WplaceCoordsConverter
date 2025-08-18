@@ -1,12 +1,18 @@
 // ==UserScript==
 // @name         Wplace.live Coordinate Converter
 // @namespace    http://tampermonkey.net/
-// @version      1.1.0
+// @version      1.1.1
 // @description  Converts coordinates on wplace.live between Tile/Pixel and Lat/Lon
 // @author       reclacc
 // @run-at       document-start
 // @match        *://*.wplace.live/*
 // @icon         https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/4937468765558c7e53125e70764ebe204726a309/icon.png
+// @license      MIT
+// @homepageURL  https://github.com/reclacc/WplaceCoordsConverter
+// @supportURL   https://github.com/reclacc/WplaceCoordsConverter/issues
+// @updateURL    https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/master/WplaceCoordsConverter.js
+// @downloadURL  https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/master/WplaceCoordsConverter.js
+// @contributionURL https://github.com/reclacc/WplaceCoordsConverter
 // @grant        GM_addStyle
 // @grant        GM_setValue
 // @grant        GM_getValue
