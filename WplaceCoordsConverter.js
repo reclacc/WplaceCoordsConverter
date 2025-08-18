@@ -550,7 +550,7 @@
 
             input[type="number"]::-webkit-outer-spin-button,
             input[type="number"]::-webkit-inner-spin-button {
-                -webkit-appearance: none; // Yeah, yeah everybody write about it
+                -webkit-appearance: none;
             }
 
             input[type='number'],
@@ -774,8 +774,9 @@
         let currentY;
         let initialX;
         let initialY;
-        let xOffset = 0;
-        let yOffset = 0;
+
+        let xOffset = parseInt(element.style.left, 10) || 0;
+        let yOffset = parseInt(element.style.top, 10) || 0;
 
         const header = element.querySelector('.converter-header');
 
@@ -786,6 +787,9 @@
         function dragStart(e) {
             if (e.target.closest('.control-btn')) return;
 
+            xOffset = parseInt(element.style.left, 10);
+            yOffset = parseInt(element.style.top, 10);
+            
             initialX = e.clientX - xOffset;
             initialY = e.clientY - yOffset;
 
@@ -796,24 +800,28 @@
         }
 
         function dragMove(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
+            if (!isDragging) return;
+            e.preventDefault();
 
-                const rect = element.getBoundingClientRect();
-                const maxX = window.innerWidth - rect.width;
-                const maxY = window.innerHeight - rect.height;
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
 
-                currentX = Math.max(0, Math.min(currentX, maxX));
-                currentY = Math.max(0, Math.min(currentY, maxY));
+            const width = element.offsetWidth;
+            const content = element.querySelector('.converter-content');
+            const height = content && content.style.display === 'none'
+                ? element.querySelector('.converter-header').offsetHeight
+                : element.offsetHeight;
 
-                xOffset = currentX;
-                yOffset = currentY;
+            const maxX = Math.max(0, window.innerWidth - width);
+            const maxY = Math.max(0, window.innerHeight - height);
 
-                element.style.left = currentX + 'px';
-                element.style.top = currentY + 'px';
-            }
+            currentX = Math.max(0, Math.min(currentX, maxX));
+            currentY = Math.max(0, Math.min(currentY, maxY));
+
+            xOffset = currentX;
+            yOffset = currentY;
+            element.style.left = currentX + 'px';
+            element.style.top = currentY + 'px';
         }
 
         function dragEnd() {
@@ -822,7 +830,6 @@
                 initialY = currentY;
                 isDragging = false;
                 element.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-
                 GM_setValue('windowX', currentX);
                 GM_setValue('windowY', currentY);
             }
