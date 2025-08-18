@@ -744,27 +744,33 @@
 
         document.getElementById('copy-btn').addEventListener('click', () => {
             const output = document.getElementById('output-area');
-            navigator.clipboard.writeText(output.textContent).then(() => {
-                const originalText = output.textContent;
-                output.textContent = '📋 Скопировано в буфер обмена!';
-                setTimeout(() => {
-                    output.textContent = originalText;
-                }, 1500);
-            }).catch(() => {
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = output.textContent;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
+            const originalText = output.textContent;
 
-                const originalText = output.textContent;
+            const onSuccess = () => {
                 output.textContent = '📋 Скопировано в буфер обмена!';
-                setTimeout(() => {
-                    output.textContent = originalText;
-                }, 1500);
-            });
+                setTimeout(() => { output.textContent = originalText; }, 1500);
+            };
+            
+            const onFailure = () => {
+                try {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = originalText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    onSuccess();
+                } catch (e) {
+                    output.textContent = '❌ Не удалось скопировать';
+                    output.className = 'error';
+                }
+            };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(originalText).then(onSuccess).catch(onFailure);
+            } else {
+                onFailure();
+            }
         });
     }
 
