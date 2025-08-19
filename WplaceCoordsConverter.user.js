@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace.live Coordinate Converter
 // @namespace    http://tampermonkey.net/
-// @version      1.1.1
+// @version      1.2.0
 // @description  Converts coordinates on wplace.live between Tile/Pixel and Lat/Lon
 // @author       reclacc
 // @run-at       document-start
@@ -10,9 +10,8 @@
 // @license      MIT
 // @homepageURL  https://github.com/reclacc/WplaceCoordsConverter
 // @supportURL   https://github.com/reclacc/WplaceCoordsConverter/issues
-// @updateURL    https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/master/WplaceCoordsConverter.js
-// @downloadURL  https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/master/WplaceCoordsConverter.js
-// @contributionURL https://github.com/reclacc/WplaceCoordsConverter
+// @updateURL    https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/master/WplaceCoordsConverter.user.js
+// @downloadURL  https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/master/WplaceCoordsConverter.user.js
 // @grant        GM_addStyle
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -132,9 +131,126 @@
         }
     }
 
+    class RequestInterceptor {
+        constructor() {
+            this.lastPixelData = null;
+            this.setupInterception();
+            this.setupCanvasListener();
+        }
+
+        setupInterception() {
+            const self = this;
+
+            const observer = new PerformanceObserver((list) => {
+                const entries = list.getEntries();
+                entries.forEach((entry) => {
+                    if (entry.name && self.isPixelRequest(entry.name)) {
+                        self.extractCoordinates(entry.name);
+                    }
+                });
+            });
+
+            try {
+                observer.observe({ entryTypes: ['resource'] });
+            } catch (e) {
+                console.log('Performance Observer not supported');
+            }
+
+            setInterval(() => {
+                const entries = performance.getEntriesByType('resource');
+                const recentEntries = entries.filter(entry =>
+                    Date.now() - entry.fetchStart < 1000 &&
+                    self.isPixelRequest(entry.name)
+                );
+
+                recentEntries.forEach(entry => {
+                    self.extractCoordinates(entry.name);
+                });
+            }, 200);
+        }
+
+        isPixelRequest(url) {
+            return url && (
+                (url.includes('backend.wplace.live') || url.includes('wplace.live')) &&
+                url.includes('/pixel/') &&
+                (url.includes('?x=') || url.includes('&x=')) &&
+                (url.includes('&y=') || url.includes('?y='))
+            );
+        }
+
+        extractCoordinates(url) {
+            try {
+                const patterns = [
+                    /\/pixel\/(\d+)\/(\d+)\?x=(\d+)&y=(\d+)/,
+                    /\/pixel\/(\d+)\/(\d+).*[?&]x=(\d+).*[&]y=(\d+)/,
+                    /\/pixel\/(\d+)\/(\d+).*[?&]y=(\d+).*[&]x=(\d+)/,
+                    /(\d+)\/(\d+).*x[=:](\d+).*y[=:](\d+)/
+                ];
+
+                for (const pattern of patterns) {
+                    const match = url.match(pattern);
+                    if (match) {
+                        const data = {
+                            tlX: parseInt(match[1]),
+                            tlY: parseInt(match[2]),
+                            pxX: parseInt(match[3]),
+                            pxY: parseInt(match[4]),
+                            timestamp: Date.now(),
+                            url: url
+                        };
+
+                        if (this.isValidPixelData(data)) {
+                            this.lastPixelData = data;
+                            this.notifyUI(data);
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error extracting coordinates:', e);
+            }
+        }
+
+        isValidPixelData(data) {
+            return (
+                !isNaN(data.tlX) && !isNaN(data.tlY) &&
+                !isNaN(data.pxX) && !isNaN(data.pxY) &&
+                data.tlX >= 0 && data.tlX <= 2047 &&
+                data.tlY >= 0 && data.tlY <= 2047 &&
+                data.pxX >= 0 && data.pxX <= 999 &&
+                data.pxY >= 0 && data.pxY <= 999
+            );
+        }
+
+        setupCanvasListener() {
+            document.addEventListener('click', (e) => {
+                const canvas = e.target.closest('canvas');
+                if (canvas) {
+                    setTimeout(() => {
+                        if (this.lastPixelData && Date.now() - this.lastPixelData.timestamp < 2000) {
+                            this.notifyUI(this.lastPixelData);
+                        }
+                    }, 100);
+
+                    setTimeout(() => {
+                        if (this.lastPixelData && Date.now() - this.lastPixelData.timestamp < 2000) {
+                            this.notifyUI(this.lastPixelData);
+                        }
+                    }, 300);
+                }
+            });
+        }
+
+        notifyUI(pixelData) {
+            const event = new CustomEvent('pixelCaptured', { detail: pixelData });
+            document.dispatchEvent(event);
+        }
+    }
+
     function createUI() {
         const projector = new Projector();
         const fixedZoom = 11;
+        const interceptor = new RequestInterceptor();
 
         const savedX = GM_getValue('windowX', 20);
         const savedY = GM_getValue('windowY', 20);
@@ -162,6 +278,11 @@
                     <div class="section-header">
                         <div class="section-icon">🗂️</div>
                         <span>Tile/Pixel → Lat/Lon</span>
+                    </div>
+                    <div class="capture-row">
+                        <button id="capturePixel" class="control-btn capture-pixel" title="Использовать последний активный пиксель">
+                            <span>🎯</span>
+                        </button>
                     </div>
                     <div class="input-row">
                         <div class="input-group">
@@ -461,6 +582,25 @@
                 box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
             }
 
+            .convert-btn.capture {
+                background: linear-gradient(135deg, #f59e0b, #d97706);
+                color: white;
+                box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            }
+
+            .convert-btn.capture:hover {
+                background: linear-gradient(135deg, #d97706, #b45309);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+            }
+
+            .convert-btn.capture:disabled {
+                background: linear-gradient(135deg, #6b7280, #4b5563);
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
             .convert-btn:active {
                 transform: translateY(0);
             }
@@ -545,6 +685,10 @@
                 color: #10b981 !important;
             }
 
+            .pixel-captured {
+                color: #f59e0b !important;
+            }
+
             @keyframes pulse {
                 0%, 100% { opacity: 1; }
                 50% { opacity: 0.7; }
@@ -564,6 +708,48 @@
             input[type="number"]:focus {
                 appearance: none;
                 -moz-appearance: textfield;
+            }
+
+            .conversion-section:first-child {
+                position: relative;
+            }
+
+            .capture-row {
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                margin: 0;
+                z-index: 10;
+            }
+
+            .control-btn.capture-pixel {
+                padding: 6px 10px;
+                border-radius: 50%;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .control-btn.capture-pixel span {
+                font-size: 14px;
+                display: block;
+                transform: translateY(-1px);
+            }
+
+            .control-btn.capture-pixel:hover {
+                background: linear-gradient(135deg, #d97706, #b45309);
+                transform: translateY(-1px);
+                box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+            }
+
+            .control-btn.capture-pixel:disabled {
+                background: linear-gradient(135deg, #6b7280, #4b5563);
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+                opacity: 0.6;
             }
         `);
 
@@ -701,6 +887,53 @@
 
                 btn.classList.remove('processing');
             }, 300);
+        }
+
+        document.getElementById('capturePixel').addEventListener('click', () => {
+            if (!interceptor.lastPixelData) {
+                const output = document.getElementById('output-area');
+                output.textContent = '⚠️ Нет захваченных координат\n\nКликните на canvas, чтобы захватить координаты пикселя';
+                output.className = 'error';
+                return;
+            }
+
+            const btn = document.getElementById('capturePixel');
+            const output = document.getElementById('output-area');
+
+            btn.classList.add('processing');
+            output.textContent = 'Обработка захваченных координат...';
+
+            setTimeout(() => {
+                const data = interceptor.lastPixelData;
+
+                document.getElementById('tile-x').value = data.tlX;
+                document.getElementById('tile-y').value = data.tlY;
+                document.getElementById('pixel-x').value = data.pxX;
+                document.getElementById('pixel-y').value = data.pxY;
+
+                const pixelX = data.tlX * projector.tileSize + data.pxX;
+                const pixelY = data.tlY * projector.tileSize + data.pxY;
+                const [lat, lon] = projector.pixelCenterLatLon(pixelX, pixelY, fixedZoom);
+
+                document.getElementById('lat').value = lat;
+                document.getElementById('lon').value = lon;
+
+                output.textContent = `🎯 Координаты пикселя получены:\n\nTile: ${data.tlX}, ${data.tlY}\nPixel: ${data.pxX}, ${data.pxY}\n\nLatitude:  ${lat}\nLongitude: ${lon}`;
+                output.className = 'pixel-captured';
+
+                btn.classList.remove('processing');
+            }, 300);
+        });
+
+        document.addEventListener('pixelCaptured', (e) => {
+            const captureBtn = document.getElementById('capturePixel');
+            captureBtn.disabled = false;
+            captureBtn.style.opacity = '1';
+
+            captureBtn.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.6)';
+            setTimeout(() => {
+                captureBtn.style.boxShadow = '';
+            }, 2000);
         });
 
         document.getElementById('toTilePixel').addEventListener('click', () => {
@@ -756,7 +989,7 @@
                 output.textContent = '📋 Скопировано в буфер обмена!';
                 setTimeout(() => { output.textContent = originalText; }, 1500);
             };
-            
+
             const onFailure = () => {
                 try {
                     const textArea = document.createElement('textarea');
@@ -778,6 +1011,12 @@
                 onFailure();
             }
         });
+
+        const captureBtn = document.getElementById('capturePixel');
+        captureBtn.disabled = !interceptor.lastPixelData;
+        if (!interceptor.lastPixelData) {
+            captureBtn.classList.add('disabled');
+        }
     }
 
     function makeDraggable(element) {
@@ -801,7 +1040,7 @@
 
             xOffset = parseInt(element.style.left, 10);
             yOffset = parseInt(element.style.top, 10);
-            
+
             initialX = e.clientX - xOffset;
             initialY = e.clientY - yOffset;
 
