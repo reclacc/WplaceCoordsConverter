@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace.live Coordinate Converter
 // @namespace    http://tampermonkey.net/
-// @version      1.2.0
+// @version      1.2.1
 // @description  Converts coordinates on wplace.live between Tile/Pixel and Lat/Lon
 // @author       reclacc
 // @run-at       document-start
@@ -887,7 +887,7 @@
 
                 btn.classList.remove('processing');
             }, 300);
-        }
+        });
 
         document.getElementById('capturePixel').addEventListener('click', () => {
             if (!interceptor.lastPixelData) {
