@@ -20,9 +20,10 @@
 ## Установка
 
 1. Установи [Tampermonkey](https://www.tampermonkey.net/) (Chrome, Firefox, Safari)
-2. Закинь туда содержимое файла WplaceCoordsConverter.js и включи появившийся в списке скрипт
-3. Обнови страницу wplace.live
-4. PROFIT
+2. Тыкни [сюда](https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/master/WplaceCoordsConverter.user.js), Tampermonkey должен определить пользовательский скрипт
+3. Если не определилось, ручками закинь туда содержимое файла [WplaceCoordsConverter.user.js](https://raw.githubusercontent.com/reclacc/WplaceCoordsConverter/master/WplaceCoordsConverter.user.js) и включи появившийся в списке скрипт
+4. Обнови страницу wplace.live
+5. PROFIT
 
 ### Конвертация из плитки/пикселя в географические координаты
 1. Введи значения:
