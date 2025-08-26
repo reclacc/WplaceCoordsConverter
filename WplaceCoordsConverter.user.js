@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace.live Coordinate Converter
 // @namespace    http://tampermonkey.net/
-// @version      1.2.2
+// @version      1.2.3
 // @description  Converts coordinates on wplace.live between Tile/Pixel and Lat/Lon
 // @author       reclacc
 // @run-at       document-start
@@ -780,6 +780,18 @@
             input.addEventListener('focus', resetError);
         });
 
+        function resetAllErrors() {
+            document.querySelectorAll('input.error').forEach(input => {
+                input.classList.remove('error');
+            });
+            
+            const output = document.getElementById('output-area');
+            if (output.classList.contains('error')) {
+                output.textContent = 'Введите координаты и нажмите кнопку конвертации';
+                output.className = '';
+            }
+        }
+
         function validateTilePixelInputs() {
             let isValid = true;
             const errorFields = [];
@@ -840,6 +852,7 @@
         }
 
         document.getElementById('toLatLon').addEventListener('click', () => {
+            resetAllErrors();
             const validation = validateTilePixelInputs();
 
             if (!validation.isValid) {
@@ -890,15 +903,7 @@
         });
 
         document.getElementById('capturePixel').addEventListener('click', () => {
-            document.querySelectorAll('input.error').forEach(input => {
-                input.classList.remove('error');
-            });
-
-            const output = document.getElementById('output-area');
-            if (output.classList.contains('error')) {
-                output.textContent = 'Введите координаты и нажмите кнопку конвертации';
-                output.className = '';
-            }
+            resetAllErrors();
 
             if (!interceptor.lastPixelData) {
                 const output = document.getElementById('output-area');
@@ -947,6 +952,7 @@
         });
 
         document.getElementById('toTilePixel').addEventListener('click', () => {
+            resetAllErrors();
             const validation = validateLatLonInputs();
 
             if (!validation.isValid) {
