@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace.live Coordinate Converter
 // @namespace    http://tampermonkey.net/
-// @version      1.2.1
+// @version      1.2.2
 // @description  Converts coordinates on wplace.live between Tile/Pixel and Lat/Lon
 // @author       reclacc
 // @run-at       document-start
@@ -890,6 +890,16 @@
         });
 
         document.getElementById('capturePixel').addEventListener('click', () => {
+            document.querySelectorAll('input.error').forEach(input => {
+                input.classList.remove('error');
+            });
+
+            const output = document.getElementById('output-area');
+            if (output.classList.contains('error')) {
+                output.textContent = 'Введите координаты и нажмите кнопку конвертации';
+                output.className = '';
+            }
+
             if (!interceptor.lastPixelData) {
                 const output = document.getElementById('output-area');
                 output.textContent = '⚠️ Нет захваченных координат\n\nКликните на canvas, чтобы захватить координаты пикселя';
